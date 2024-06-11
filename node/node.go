@@ -81,10 +81,9 @@ func (n *Node) addPeer(c proto.NodeClient, v *proto.Version) {
 
 	n.peers[c] = v
 
-	for _, addr := range v.PeerList {
-		if addr != n.listenAddr {
-			fmt.Printf("[%s] need to connect with %s\n", n.listenAddr, addr)
-		}
+	// connect to all peers in the received list of peers
+	if len(v.PeerList) > 0 {
+		go n.bootstrapNetwork(v.PeerList)
 	}
 
 	n.logger.Debugw(
@@ -103,6 +102,18 @@ func (n *Node) deletePeer(c proto.NodeClient) {
 
 func (n *Node) bootstrapNetwork(addrs []string) error {
 	for _, addr := range addrs {
+		if !n.canConnectWith(addr) {
+			continue
+		}
+
+		n.logger.Debugw(
+			"dialing remote node",
+			"we",
+			n.listenAddr,
+			"remote",
+			addr,
+		)
+
 		c, v, err := n.dialRemoteNode(addr)
 		if err != nil {
 			return err
@@ -135,6 +146,21 @@ func (n *Node) getVersion() *proto.Version {
 		ListenAddr: n.listenAddr,
 		PeerList:   n.getPeerList(),
 	}
+}
+
+func (n *Node) canConnectWith(addr string) bool {
+	if addr == n.listenAddr {
+		return false
+	}
+
+	connectedPeers := n.getPeerList()
+	for _, connectedAddr := range connectedPeers {
+		if connectedAddr == addr {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (n *Node) getPeerList() []string {
