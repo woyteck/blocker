@@ -22,7 +22,7 @@ func main() {
 }
 
 func makeNode(listenAddr string, bootstrapNodes []string) *node.Node {
-	n := node.New()
+	n := node.NewNode()
 	go n.Start(listenAddr, bootstrapNodes)
 
 	return n

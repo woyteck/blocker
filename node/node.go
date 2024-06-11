@@ -24,7 +24,7 @@ type Node struct {
 	proto.UnimplementedNodeServer
 }
 
-func New() *Node {
+func NewNode() *Node {
 	logger, _ := zap.NewDevelopment()
 	return &Node{
 		peers:   make(map[proto.NodeClient]*proto.Version),
