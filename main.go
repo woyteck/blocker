@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"google.golang.org/grpc"
@@ -14,27 +12,30 @@ import (
 )
 
 func main() {
-	node := node.New()
+	makeNode(":3000", []string{})
+	makeNode(":4000", []string{":3000"})
 
-	opts := []grpc.ServerOption{}
-	grpcServer := grpc.NewServer(opts...)
-	ln, err := net.Listen("tcp", ":3000")
-	if err != nil {
-		log.Fatal(err)
-	}
-	proto.RegisterNodeServer(grpcServer, node)
-	fmt.Println("node running on:", ":3000")
+	// go func() {
+	// 	for {
+	// 		time.Sleep(2 * time.Second)
+	// 		makeHandshake()
+	// 	}
+	// }()
+	select {}
+}
 
-	defer grpcServer.Stop()
+func makeNode(listenAddr string, bootstrapNodes []string) *node.Node {
+	n := node.New()
+	go n.Start(listenAddr)
+	time.Sleep(time.Second)
 
-	go func() {
-		for {
-			time.Sleep(2 * time.Second)
-			// makeTransaction()
-			makeHandshake()
+	if len(bootstrapNodes) > 0 {
+		if err := n.BootstrapNetwork(bootstrapNodes); err != nil {
+			log.Fatal(err)
 		}
-	}()
-	grpcServer.Serve(ln)
+	}
+
+	return n
 }
 
 func makeHandshake() {
@@ -47,8 +48,9 @@ func makeHandshake() {
 	}
 
 	version := &proto.Version{
-		Version: "blocker-0.1",
-		Height:  1,
+		Version:    "blocker-0.1",
+		Height:     1,
+		ListenAddr: ":4000",
 	}
 
 	c := proto.NewNodeClient(client)
