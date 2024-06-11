@@ -8,6 +8,22 @@ import (
 	"woyteck.pl/blocker/proto"
 )
 
+func VerifyBlock(b *proto.Block) bool {
+	if len(b.PublicKey) != crypto.PubKeyLen {
+		return false
+	}
+
+	if len(b.Signature) != crypto.SignatureLen {
+		return false
+	}
+
+	sig := crypto.SignatureFromBytes(b.Signature)
+	pubKey := crypto.PublicKeyFromBytes(b.PublicKey)
+	hash := HashBlock(b)
+
+	return sig.Verify(pubKey, hash)
+}
+
 func SignBlock(privKey *crypto.PrivateKey, b *proto.Block) *crypto.Signature {
 	hash := HashBlock(b)
 	sig := privKey.Sign(hash)

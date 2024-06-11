@@ -91,6 +91,12 @@ func (c *Chain) GetBlockByHeight(height int) (*proto.Block, error) {
 }
 
 func (c *Chain) ValidateBlock(b *proto.Block) error {
+	// validate the signature of the block
+	if !types.VerifyBlock(b) {
+		return fmt.Errorf("invalid block signature")
+	}
+
+	// validate if the prev hash is the actual hash of the current block
 	currentBlock, err := c.GetBlockByHeight(c.Height())
 	if err != nil {
 		return err
