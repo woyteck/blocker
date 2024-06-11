@@ -18,6 +18,9 @@ func TestSignBlock(t *testing.T) {
 	sig := SignBlock(privKey, block)
 	assert.Equal(t, 64, len(sig.Bytes()))
 	assert.True(t, sig.Verify(pubKey, HashBlock(block)))
+
+	assert.Equal(t, block.PublicKey, pubKey.Bytes())
+	assert.Equal(t, block.Signature, sig.Bytes())
 }
 
 func TestHashBlock(t *testing.T) {
