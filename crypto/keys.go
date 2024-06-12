@@ -128,6 +128,16 @@ type Address struct {
 	value []byte
 }
 
+func AddressFromBytes(b []byte) Address {
+	if len(b) != AddressLen {
+		panic(fmt.Sprintf("length of the bytes not equal to %d", AddressLen))
+	}
+
+	return Address{
+		value: b,
+	}
+}
+
 func (a Address) Bytes() []byte {
 	return a.value
 }
