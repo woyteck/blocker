@@ -1,8 +1,11 @@
 package node
 
 import (
+	"encoding/hex"
+	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"woyteck.pl/blocker/crypto"
 	"woyteck.pl/blocker/proto"
@@ -22,7 +25,7 @@ func randomBlock(t *testing.T, chain *Chain) *proto.Block {
 }
 
 func TestNewChain(t *testing.T) {
-	chain := NewChain(NewMemoryBlockStore())
+	chain := NewChain(NewMemoryBlockStore(), NewMemoryTXStore())
 
 	require.Equal(t, 0, chain.Height())
 	_, err := chain.GetBlockByHeight(0)
@@ -30,7 +33,7 @@ func TestNewChain(t *testing.T) {
 }
 
 func TestChainHeight(t *testing.T) {
-	chain := NewChain(NewMemoryBlockStore())
+	chain := NewChain(NewMemoryBlockStore(), NewMemoryTXStore())
 	for i := 0; i < 100; i++ {
 		b := randomBlock(t, chain)
 		require.Nil(t, chain.AddBlock(b))
@@ -39,7 +42,7 @@ func TestChainHeight(t *testing.T) {
 }
 
 func TestAddBlock(t *testing.T) {
-	chain := NewChain(NewMemoryBlockStore())
+	chain := NewChain(NewMemoryBlockStore(), NewMemoryTXStore())
 
 	for i := 0; i < 100; i++ {
 		block := randomBlock(t, chain)
@@ -55,4 +58,47 @@ func TestAddBlock(t *testing.T) {
 		require.Nil(t, err)
 		require.Equal(t, block, fetchedBlockByHeight)
 	}
+}
+
+func TestAddBlockWithTx(t *testing.T) {
+	var (
+		chain     = NewChain(NewMemoryBlockStore(), NewMemoryTXStore())
+		block     = randomBlock(t, chain)
+		privKey   = crypto.NewPrivateKeyFromSeedString(godSeed)
+		recipient = crypto.GeneratePrivateKey().Public().Address().Bytes()
+	)
+
+	ftt, err := chain.txStore.Get("08f565d160b7b4f2611d8880363db090db78f48685a092755b42336b3d20666a")
+	assert.Nil(t, err)
+	fmt.Println(ftt)
+
+	inputs := []*proto.TxInput{
+		{
+			PrevTxHash:   types.HashTransaction(ftt),
+			PrevOutIndex: 0,
+			PublicKey:    privKey.Public().Bytes(),
+		},
+	}
+	outputs := []*proto.TxOutput{
+		{
+			Amount:  100,
+			Address: recipient,
+		},
+		{
+			Amount:  900,
+			Address: privKey.Public().Address().Bytes(),
+		},
+	}
+	tx := &proto.Transaction{
+		Version: 1,
+		Inputs:  inputs,
+		Outputs: outputs,
+	}
+	block.Transactions = append(block.Transactions, tx)
+	require.Nil(t, chain.AddBlock(block))
+	txHash := hex.EncodeToString(types.HashTransaction(tx))
+
+	fetchedTx, err := chain.txStore.Get(txHash)
+	assert.Nil(t, err)
+	assert.Equal(t, tx, fetchedTx)
 }
